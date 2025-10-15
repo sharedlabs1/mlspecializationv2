@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ML Specialization MCQ Review</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; color: #333; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px 20px; text-align: center; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+    .header p { font-size: 1.2em; opacity: 0.9; }
+    .stats { background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+    .stat-item { text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+    .stat-number { font-size: 2em; font-weight: bold; color: #667eea; }
+    .stat-label { color: #666; margin-top: 5px; }
+    .question-card { background: white; margin-bottom: 25px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+    .question-header { background: #667eea; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .question-number { font-weight: bold; font-size: 1.1em; }
+    .question-topic { background: #764ba2; color: white; padding: 4px 12px; border-radius: 15px; font-size: 0.85em; font-weight: bold; }
+    .question-set { background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+    .question-content { padding: 20px; }
+    .scenario { background: #f8f9fa; border-left: 4px solid #17a2b8; padding: 15px; margin: 15px 0; border-radius: 0 8px 8px 0; font-style: italic; }
+    .question-text { font-size: 1.1em; margin-bottom: 20px; line-height: 1.8; color: #2c3e50; font-weight: 500; }
+    .options-container { display: grid; gap: 12px; }
+    .option { padding: 12px 16px; border: 2px solid #e9ecef; border-radius: 8px; background: #f8f9fa; display: flex; align-items: flex-start; }
+    .option.correct { border-color: #28a745; background: #d4edda; color: #155724; }
+    .option-label { font-weight: bold; margin-right: 12px; min-width: 25px; color: #667eea; }
+    .option.correct .option-label { color: #155724; }
+    .option-text { flex: 1; }
+    .correct-indicator { margin-left: auto; color: #28a745; font-weight: bold; }
+    .explanation { margin-top: 15px; padding: 15px; background: #e8f5e8; border: 1px solid #c3e6cb; border-radius: 8px; }
+    .explanation-title { font-weight: bold; color: #155724; margin-bottom: 8px; }
+    .no-results { text-align: center; padding: 50px; color: #666; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ML Specialization MCQ Review</h1>
+      <p>All questions from ML/DL MCQ sets and easy set. Correct answers are marked in green.</p>
+    </div>
+    <div class="stats" id="stats">
+      <div class="stat-item">
+        <div class="stat-number" id="totalQuestions">...</div>
+        <div class="stat-label">Total Questions</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="totalTopics">...</div>
+        <div class="stat-label">Topics Covered</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="totalSets">...</div>
+        <div class="stat-label">Question Sets</div>
+      </div>
+    </div>
+    <div id="questionsContainer"><div class="no-results">Loading questions...</div></div>
+  </div>
+  <script>
+  // List of CSV files to load
+  const csvFiles = [
+    { file: './ml_dl_mcq_set1_200_questions.csv', set: 'Set 1' },
+    { file: './ml_dl_mcq_set2_200_questions.csv', set: 'Set 2' },
+    { file: './ml_dl_mcq_set3_200_questions.csv', set: 'Set 3' },
+    { file: './ml_easy.csv', set: 'Easy' }
+  ];
+  let allQuestions = [];
+  let topicsSet = new Set();
+  let setsSet = new Set();
+  function cleanCSVField(field) {
+    if (!field) return '';
+    return field.replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+  }
+  function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    let i = 0;
+    while (i < line.length) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          current += '"'; i += 2;
+        } else { inQuotes = !inQuotes; i++; }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current); current = ''; i++;
+      } else { current += char; i++; }
+    }
+    result.push(current);
+    return result;
+  }
+  function parseCSV(csvText, setName) {
+    const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const values = parseCSVLine(line);
+      if (values.length >= 9) {
+        const q = {
+          question: cleanCSVField(values[0]),
+          scenario: cleanCSVField(values[1]),
+          options: [cleanCSVField(values[2]), cleanCSVField(values[3]), cleanCSVField(values[4]), cleanCSVField(values[5])],
+          correct: cleanCSVField(values[6]),
+          explanation: cleanCSVField(values[7]),
+          topic: cleanCSVField(values[8]),
+          set: setName
+        };
+        allQuestions.push(q);
+        topicsSet.add(q.topic);
+        setsSet.add(setName);
+      }
+    }
+  }
+  async function loadAllCSVs() {
+    for (const csvInfo of csvFiles) {
+      try {
+        const response = await fetch(csvInfo.file);
+        if (response.ok) {
+          const csvText = await response.text();
+          parseCSV(csvText, csvInfo.set);
+        }
+      } catch (e) { /* ignore missing files */ }
+    }
+    renderStats();
+    renderQuestions();
+  }
+  function renderStats() {
+    document.getElementById('totalQuestions').textContent = allQuestions.length;
+    document.getElementById('totalTopics').textContent = topicsSet.size;
+    document.getElementById('totalSets').textContent = setsSet.size;
+  }
+  function renderQuestions() {
+    const container = document.getElementById('questionsContainer');
+    if (allQuestions.length === 0) {
+      container.innerHTML = '<div class="no-results">No questions found.</div>';
+      return;
+    }
+    container.innerHTML = allQuestions.map((q, idx) => {
+      return `<div class="question-card">
+        <div class="question-header">
+          <span class="question-number">Q${idx+1}</span>
+          <span class="question-set">${q.set}</span>
+          <span class="question-topic">${q.topic}</span>
+        </div>
+        <div class="question-content">
+          ${q.scenario ? `<div class="scenario"><strong>Scenario:</strong> ${q.scenario}</div>` : ''}
+          <div class="question-text">${q.question}</div>
+          <div class="options-container">
+            ${q.options.map((opt, i) => {
+              const isCorrect = (q.correct.trim().toUpperCase() === String.fromCharCode(65+i));
+              return `<div class="option${isCorrect ? ' correct' : ''}"><span class="option-label">${String.fromCharCode(65+i)}.</span><span class="option-text">${opt}</span>${isCorrect ? '<span class="correct-indicator">✓ Correct</span>' : ''}</div>`;
+            }).join('')}
+          </div>
+          ${q.explanation ? `<div class="explanation"><div class="explanation-title">💡 Explanation:</div><div>${q.explanation}</div></div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.addEventListener('DOMContentLoaded', loadAllCSVs);
+  </script>
+</body>
+</html>
